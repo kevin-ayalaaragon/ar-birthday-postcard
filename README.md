@@ -21,12 +21,19 @@ separately, outside this repo.
 
 ## Current asset status
 
+Target aspect ratio is now **9:16 portrait (1080x1920)**, changed from an
+earlier 3:4 version.
+
 | File | Status |
 |---|---|
-| `target.jpg` | 768x1024 (3:4 portrait) cartoon, in place |
-| `targets.mind` | compiled from this exact `target.jpg`, in place |
-| `video.mp4` | ⚠️ currently 720x1280 (9:16) - doesn't match `target.jpg`'s 3:4 aspect ratio. Needs a re-export at 3:4 portrait (e.g. 768x1024 or 1080x1440) or the video will look stretched over the tracked image. |
-| `index.html` | `TARGET_IMAGE_WIDTH_PX`/`HEIGHT_PX` already set to 768/1024 to match `target.jpg` |
+| `target.jpg` | ⚠️ stale - still the old 768x1024 (3:4) cartoon. Needs replacing with the new 1080x1920 (or any exact-9:16) artwork. |
+| `targets.mind` | ⚠️ stale - compiled from the old 3:4 `target.jpg`. Must be recompiled once the new `target.jpg` is in place. |
+| `video.mp4` | ✅ already 720x1280, which is exactly 9:16 - **no re-export needed**, this file already matches the new target ratio. |
+| `index.html` | ✅ `TARGET_IMAGE_WIDTH_PX`/`HEIGHT_PX` already updated to 1080/1920 |
+
+Once the new `target.jpg` lands: replace the file, recompile `targets.mind`
+from it, and if its exact pixel dimensions aren't precisely 1080x1920,
+update `TARGET_IMAGE_WIDTH_PX`/`HEIGHT_PX` in `index.html` to match exactly.
 
 ## If any asset changes
 
