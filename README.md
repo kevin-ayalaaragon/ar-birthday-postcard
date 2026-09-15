@@ -4,6 +4,13 @@ Zero-install WebAR birthday card: scan a QR code on a printed postcard, the
 phone's own browser opens, tracks the front photo, and plays a video overlay
 locked onto it.
 
+**Repo:** https://github.com/kevin-ayalaaragon/ar-birthday-postcard
+**Live Pages URL (already enabled):** https://kevin-ayalaaragon.github.io/ar-birthday-postcard/
+(`AR_EXPERIENCE_URL` in `build_postcard.py` is already set to this.)
+
+Real assets (`target-source.jpg`, `video.mp4`, `targets.mind`) still need to
+be added before the page actually does anything — see the steps below.
+
 ```
 /
 ├── index.html          # WebAR viewer (MindAR + A-Frame)

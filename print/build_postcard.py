@@ -36,7 +36,7 @@ POSTCARD_SUBTITLE = "Ropes Course Adventure"
 
 # The published GitHub Pages URL that the QR code will point to.
 # (Set this AFTER you've deployed - see the README for the deploy steps.)
-AR_EXPERIENCE_URL = "https://YOUR-GITHUB-USERNAME.github.io/YOUR-REPO-NAME/"
+AR_EXPERIENCE_URL = "https://kevin-ayalaaragon.github.io/ar-birthday-postcard/"
 
 # Source cartoon illustration (front artwork photo). This should already be
 # roughly the right aspect ratio for the polaroid photo window below.
