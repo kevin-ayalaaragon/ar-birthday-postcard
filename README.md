@@ -8,15 +8,22 @@ locked onto it.
 **Live Pages URL (already enabled):** https://kevin-ayalaaragon.github.io/ar-birthday-postcard/
 (`AR_EXPERIENCE_URL` in `build_postcard.py` is already set to this.)
 
-Real assets (`target-source.jpg`, `video.mp4`, `targets.mind`) still need to
-be added before the page actually does anything — see the steps below.
+`target-source.jpg` now has a real (code-drawn) cartoon illustration —
+[`art/generate_cartoon.py`](art/generate_cartoon.py) — matching the
+reference photo's composition (two smiling figures, orange/red climbing
+helmets, ropes-course rigging, warm red lighting). It's a placeholder/
+starter, not an AI photo conversion (see section 0), but it's real usable
+art, not a blank block. `video.mp4` and `targets.mind` still need to be
+added before the page actually does anything — see the steps below.
 
 ```
 /
 ├── index.html          # WebAR viewer (MindAR + A-Frame)
-├── target-source.jpg   # your cartoon illustration (source art, see below)
-├── video.mp4           # animation overlay (H.264 / AAC)
-├── targets.mind         # compiled tracking file (generated, see step 3)
+├── target-source.jpg   # cartoon illustration (source art, see below)
+├── video.mp4           # animation overlay (H.264 / AAC) - you provide this
+├── targets.mind        # compiled tracking file (generated, see step 3)
+├── art/
+│   └── generate_cartoon.py  # code-drawn starter illustration (option B below)
 └── print/
     ├── build_postcard.py
     ├── fonts/           # drop free .ttf files here (optional but recommended)
@@ -46,12 +53,24 @@ prompt like:
 Keep the final export at a decent resolution (1800×1200 px or larger) so it
 holds up at 300 DPI print.
 
-**B — Use the placeholder pipeline now.** `build_postcard.py` runs fine
-without real art (it drops in a solid-color block) so you can wire up and
-test the entire AR pipeline — QR code, tracking, video overlay, print
-layout — today, then swap in the real illustration as the very last step.
-Whichever path you pick, drop the final artwork at `target-source.jpg` in
-the project root before the final print run.
+**B — Use the code-drawn starter that's already in the repo.**
+[`art/generate_cartoon.py`](art/generate_cartoon.py) renders a flat-cartoon
+illustration (two smiling figures, orange/red climbing helmets, ropes-
+course rigging, warm red lighting) straight into `target-source.jpg` —
+already sized to the postcard's photo-window aspect ratio. It's a real,
+usable placeholder (not a blank block), good enough to wire up and test the
+entire AR pipeline — QR code, tracking, video overlay, print layout — today.
+Tweak the palette/positions at the top of the script, or swap in real AI-
+generated art (option A) as the final step before printing:
+
+```bash
+pip install pillow
+cd art
+python generate_cartoon.py
+```
+
+Whichever path you pick, the final artwork needs to end up at
+`target-source.jpg` in the project root before the final print run.
 
 One tracking note: MindAR needs visual *detail* to lock onto — sharp edges,
 varied color, texture (the polaroid frame, caption text, and illustration
