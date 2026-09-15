@@ -91,6 +91,20 @@ def fit_cover(img, target_w, target_h):
     return resized.crop((left, top, left + target_w, top + target_h))
 
 
+def fit_contain(img, max_w, max_h):
+    """
+    Resize `img` to fit entirely within max_w x max_h, preserving aspect
+    ratio and cropping nothing (like CSS object-fit: contain). We use this
+    instead of fit_cover for the printed photo: the MindAR target image is
+    compiled from the raw source art, so whatever gets printed must show
+    that art unmodified (aside from a uniform scale) or the physically
+    printed card will diverge from what was trained for tracking.
+    """
+    scale = min(max_w / img.width, max_h / img.height)
+    new_w, new_h = int(img.width * scale), int(img.height * scale)
+    return img.resize((new_w, new_h), Image.LANCZOS)
+
+
 def draw_curved_text(base_img, text, center, radius, font, fill, start_deg, end_deg):
     """Draw `text` along an arc from start_deg to end_deg (0deg = up, clockwise)."""
     n = len(text)
@@ -162,13 +176,19 @@ def build_front():
     if os.path.isfile(SOURCE_IMAGE_PATH):
         art = Image.open(SOURCE_IMAGE_PATH).convert("RGB")
         art = ImageOps.exif_transpose(art)
-        art = fit_cover(art, pw, ph)
+        # contain-fit, not cover-crop: the MindAR target is compiled from this
+        # exact source image, so the print must show it whole (just scaled),
+        # never cropped, or the tracked pixels stop matching the printed ones.
+        art = fit_contain(art, pw, ph)
     else:
         print(f"[warn] source image not found: {SOURCE_IMAGE_PATH} -- using a placeholder block.")
         art = Image.new("RGB", (pw, ph), (255, 200, 150))
 
-    canvas.paste(art, (photo_box[0], photo_box[1]))
-    draw.rectangle(photo_box, outline=INK, width=3)
+    # center the (possibly letterboxed) art inside the photo window
+    art_x = photo_box[0] + (pw - art.width) // 2
+    art_y = photo_box[1] + (ph - art.height) // 2
+    canvas.paste(art, (art_x, art_y))
+    draw.rectangle([art_x, art_y, art_x + art.width, art_y + art.height], outline=INK, width=3)
 
     # caption
     script_font = load_font(FONT_SCRIPT, int(0.42 * DPI))
@@ -283,17 +303,21 @@ def build_back():
 
 
 # --------------------------------------------------------------------------
-# AR target image - derived FROM the rendered front artwork
+# AR target image - an exact copy of the raw source art
 # --------------------------------------------------------------------------
 
-def build_target_image(front_canvas):
+def build_target_image():
     """
-    The MindAR compiler must be fed the exact pixels that will be printed and
-    later seen by the camera. We crop straight out of the rendered front
-    artwork rather than the raw source photo, so there is zero drift between
-    what gets tracked and what gets printed.
+    Return the source art untouched (aside from an EXIF-orientation fix).
+    If you've already compiled targets.mind from target-source.jpg directly
+    (e.g. via MindAR's web compiler), the printed target image must stay
+    byte-for-byte the same content - a crop, letterbox, or even a re-encode
+    can shift or soften the very features MindAR trained on. The front
+    artwork uses fit_contain (see build_front) for exactly this reason: the
+    art appears on the printed card unmodified, just uniformly scaled.
     """
-    return front_canvas.copy()
+    art = Image.open(SOURCE_IMAGE_PATH).convert("RGB")
+    return ImageOps.exif_transpose(art)
 
 
 # --------------------------------------------------------------------------
@@ -303,7 +327,6 @@ def main():
 
     front = build_front()
     back = build_back()
-    target = build_target_image(front)
 
     front_path = os.path.join(OUTPUT_DIR, "front.png")
     back_path = os.path.join(OUTPUT_DIR, "back.png")
@@ -312,21 +335,26 @@ def main():
 
     front.save(front_path, dpi=(DPI, DPI))
     back.save(back_path, dpi=(DPI, DPI))
-    target.save(target_path, quality=95)
-
     front.save(pdf_path, save_all=True, append_images=[back], resolution=float(DPI))
 
     print("\nDone:")
     print(f"  {front_path}")
     print(f"  {back_path}")
     print(f"  {pdf_path}")
-    print(f"  {target_path}")
-    print(f"\nTarget image is {target.width}x{target.height}px.")
-    print("Set these in index.html to match exactly:")
-    print(f"  window.TARGET_IMAGE_WIDTH_PX = {target.width};")
-    print(f"  window.TARGET_IMAGE_HEIGHT_PX = {target.height};")
-    print("\nNext: run target.jpg through the MindAR image compiler to produce targets.mind")
-    print("(see README.md).")
+
+    if os.path.isfile(SOURCE_IMAGE_PATH):
+        target = build_target_image()
+        target.save(target_path, quality=95)
+        print(f"  {target_path}")
+        print(f"\nTarget image is {target.width}x{target.height}px.")
+        print("Set these in index.html to match exactly:")
+        print(f"  window.TARGET_IMAGE_WIDTH_PX = {target.width};")
+        print(f"  window.TARGET_IMAGE_HEIGHT_PX = {target.height};")
+        print("\nIf targets.mind was already compiled from target-source.jpg directly,")
+        print("you're done - no need to recompile. Otherwise, run target.jpg through the")
+        print("MindAR image compiler to produce targets.mind (see README.md).")
+    else:
+        print(f"\n[warn] {SOURCE_IMAGE_PATH} not found -- skipped target.jpg.")
 
 
 if __name__ == "__main__":
