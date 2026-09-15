@@ -8,22 +8,15 @@ locked onto it.
 **Live Pages URL (already enabled):** https://kevin-ayalaaragon.github.io/ar-birthday-postcard/
 (`AR_EXPERIENCE_URL` in `build_postcard.py` is already set to this.)
 
-`target-source.jpg` now has a real (code-drawn) cartoon illustration —
-[`art/generate_cartoon.py`](art/generate_cartoon.py) — matching the
-reference photo's composition (two smiling figures, orange/red climbing
-helmets, ropes-course rigging, warm red lighting). It's a placeholder/
-starter, not an AI photo conversion (see section 0), but it's real usable
-art, not a blank block. `video.mp4` and `targets.mind` still need to be
-added before the page actually does anything — see the steps below.
+`target-source.jpg`, `video.mp4`, and `targets.mind` still need to be added
+before the page actually does anything — see the steps below.
 
 ```
 /
 ├── index.html          # WebAR viewer (MindAR + A-Frame)
-├── target-source.jpg   # cartoon illustration (source art, see below)
+├── target-source.jpg   # cartoon illustration (source art, see below) - you provide this
 ├── video.mp4           # animation overlay (H.264 / AAC) - you provide this
 ├── targets.mind        # compiled tracking file (generated, see step 3)
-├── art/
-│   └── generate_cartoon.py  # code-drawn starter illustration (option B below)
 └── print/
     ├── build_postcard.py
     ├── fonts/           # drop free .ttf files here (optional but recommended)
@@ -34,12 +27,10 @@ added before the page actually does anything — see the steps below.
 
 ## 0. About the cartoon illustration
 
-I can't turn your ropes-course photo into a cartoon directly — I don't have
-an image-generation tool in this session. Two practical paths:
-
-**A — AI-generate it (recommended for the real card).** Use any AI image
-tool you have access to (ChatGPT/DALL·E, Midjourney, Ideogram, Claude.ai's
-own image generation in a browser, etc.) and feed it your photo with a
+I can't turn your ropes-course photo into a cartoon directly — no image-
+generation tool is available in this session, and Claude.ai doesn't have
+one either. Use any AI image tool you do have access to (ChatGPT/DALL·E,
+Midjourney, Ideogram, Adobe Firefly, etc.) and feed it your photo with a
 prompt like:
 
 > Turn this photo into a flat-color cartoon illustration in a vintage
@@ -51,33 +42,16 @@ prompt like:
 > postcard poster. Square-ish composition, clean readable shapes, no text.
 
 Keep the final export at a decent resolution (1800×1200 px or larger) so it
-holds up at 300 DPI print.
-
-**B — Use the code-drawn starter that's already in the repo.**
-[`art/generate_cartoon.py`](art/generate_cartoon.py) renders a flat-cartoon
-illustration (two smiling figures, orange/red climbing helmets, ropes-
-course rigging, warm red lighting) straight into `target-source.jpg` —
-already sized to the postcard's photo-window aspect ratio. It's a real,
-usable placeholder (not a blank block), good enough to wire up and test the
-entire AR pipeline — QR code, tracking, video overlay, print layout — today.
-Tweak the palette/positions at the top of the script, or swap in real AI-
-generated art (option A) as the final step before printing:
-
-```bash
-pip install pillow
-cd art
-python generate_cartoon.py
-```
-
-Whichever path you pick, the final artwork needs to end up at
-`target-source.jpg` in the project root before the final print run.
+holds up at 300 DPI print, and export it landscape-ish to match the
+postcard's photo window (`build_postcard.py` prints the exact required
+aspect ratio each run). Save the result as `target-source.jpg` in the
+project root.
 
 One tracking note: MindAR needs visual *detail* to lock onto — sharp edges,
-varied color, texture (the polaroid frame, caption text, and illustration
-line-work all help). A very flat, low-detail cartoon with huge single-color
-areas will track worse than one with some linework/texture in it. If you
-render option A, ask for "clean bold outlines and some background detail"
-rather than fully flat vector shapes.
+varied color, texture. A very flat, low-detail cartoon with huge single-
+color areas will track worse than one with some linework/texture in it. Ask
+for "clean bold outlines and some background detail" rather than fully flat
+vector shapes.
 
 ---
 
