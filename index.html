@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>Happy Birthday AR Postcard</title>
+
+<!--
+  CONFIG: set this to the pixel dimensions of target.jpg (the exact file you
+  compiled into targets.mind). MindAR maps the target's WIDTH to 1 scene unit,
+  so the video plane's height must be (targetImageHeight / targetImageWidth)
+  or the overlay will look stretched/squashed relative to the printed card.
+-->
+<script>
+  window.TARGET_IMAGE_WIDTH_PX = 1800;   // <-- set to your target.jpg width
+  window.TARGET_IMAGE_HEIGHT_PX = 1200;  // <-- set to your target.jpg height
+</script>
+
+<script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #000; }
+  #ar-scene, a-scene { width: 100vw; height: 100vh; }
+
+  /* ---------- Tap-to-start overlay ---------- */
+  #start-overlay {
+    position: fixed; inset: 0; z-index: 20;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: radial-gradient(circle at center, #2b0d0d 0%, #0a0303 100%);
+    color: #fff; font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    text-align: center; padding: 24px; box-sizing: border-box;
+  }
+  #start-overlay h1 { font-size: 1.4rem; margin: 0 0 8px; }
+  #start-overlay p { font-size: 0.95rem; opacity: 0.8; margin: 0 0 28px; max-width: 320px; }
+  #start-btn {
+    padding: 16px 36px; font-size: 1.1rem; font-weight: 600; color: #1a0000;
+    background: #ff8a3d; border: none; border-radius: 999px; cursor: pointer;
+    box-shadow: 0 4px 18px rgba(255, 138, 61, 0.5);
+  }
+  #start-btn:active { transform: scale(0.97); }
+  #start-overlay.hidden { display: none; }
+
+  /* ---------- Scanning / status hint ---------- */
+  #hint {
+    position: fixed; left: 0; right: 0; bottom: 28px; z-index: 15;
+    text-align: center; color: #fff; font-family: -apple-system, sans-serif;
+    font-size: 0.9rem; text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+    pointer-events: none; transition: opacity 0.3s ease;
+  }
+  #hint.hidden { opacity: 0; }
+
+  /* ---------- Camera / error fallback ---------- */
+  #error-overlay {
+    position: fixed; inset: 0; z-index: 25;
+    display: none; align-items: center; justify-content: center;
+    background: #1a0000; color: #fff; font-family: -apple-system, sans-serif;
+    text-align: center; padding: 32px; box-sizing: border-box;
+  }
+  #error-overlay.visible { display: flex; }
+</style>
+</head>
+<body>
+
+<div id="start-overlay">
+  <h1>🎈 Happy Birthday!</h1>
+  <p>Point your camera at the postcard and tap start to bring the picture to life.</p>
+  <button id="start-btn">Tap to Start</button>
+</div>
+
+<div id="hint" class="hidden">Point your camera at the postcard photo</div>
+
+<div id="error-overlay">
+  <div>
+    <p>Camera access is needed to view this AR postcard.</p>
+    <p>Please allow camera permission and reload the page.</p>
+  </div>
+</div>
+
+<a-scene
+  id="ar-scene"
+  mindar-image="imageTargetSrc: ./targets.mind; autoStart: false; uiScanning: no; uiLoading: no; uiError: no; filterMinCF: 0.0001; filterBeta: 0.001;"
+  color-space="sRGB"
+  renderer="colorManagement: true, physicallyCorrectLights: true"
+  vr-mode-ui="enabled: false"
+  device-orientation-permission-ui="enabled: false"
+  embedded
+>
+  <a-assets>
+    <video
+      id="ar-video"
+      src="./video.mp4"
+      preload="auto"
+      loop="true"
+      playsinline
+      webkit-playsinline
+      crossorigin="anonymous"
+    ></video>
+  </a-assets>
+
+  <a-camera position="0 0 0" look-controls="enabled: false" cursor="fuse: false" raycaster="near: 10; far: 10000;"></a-camera>
+
+  <a-entity mindar-image-target="targetIndex: 0" id="target-anchor">
+    <a-video
+      id="ar-video-plane"
+      src="#ar-video"
+      width="1"
+      height="1"
+      position="0 0 0"
+      rotation="0 0 0"
+    ></a-video>
+  </a-entity>
+</a-scene>
+
+<script>
+(function () {
+  const startOverlay = document.getElementById('start-overlay');
+  const startBtn = document.getElementById('start-btn');
+  const errorOverlay = document.getElementById('error-overlay');
+  const hint = document.getElementById('hint');
+  const sceneEl = document.getElementById('ar-scene');
+  const videoEl = document.getElementById('ar-video');
+  const videoPlane = document.getElementById('ar-video-plane');
+  const anchor = document.getElementById('target-anchor');
+
+  // Size the video plane to match the target image's aspect ratio so the
+  // overlay lines up exactly with the printed postcard, regardless of the
+  // video file's own pixel dimensions.
+  const targetW = window.TARGET_IMAGE_WIDTH_PX || 1;
+  const targetH = window.TARGET_IMAGE_HEIGHT_PX || 1;
+  videoPlane.setAttribute('width', 1);
+  videoPlane.setAttribute('height', targetH / targetW);
+
+  let started = false;
+  let audioUnlocked = false;
+
+  function unlockAudioThenStop() {
+    if (audioUnlocked) return;
+    videoEl.muted = false;
+    const p = videoEl.play();
+    if (p && p.catch) {
+      p.then(() => {
+        videoEl.pause();
+        videoEl.currentTime = 0;
+        audioUnlocked = true;
+      }).catch(() => {
+        // Fall back to muted playback if the browser still blocks sound.
+        videoEl.muted = true;
+        videoEl.play().then(() => {
+          videoEl.pause();
+          videoEl.currentTime = 0;
+          audioUnlocked = true;
+        }).catch(() => {});
+      });
+    } else {
+      audioUnlocked = true;
+    }
+  }
+
+  async function start() {
+    if (started) return;
+    started = true;
+
+    // Must run inside the tap gesture so iOS Safari allows audio playback
+    // for every later programmatic videoEl.play() call.
+    unlockAudioThenStop();
+
+    startOverlay.classList.add('hidden');
+    hint.classList.remove('hidden');
+
+    try {
+      const arSystem = sceneEl.systems['mindar-image-system'];
+      await arSystem.start();
+    } catch (err) {
+      console.error('MindAR failed to start', err);
+      errorOverlay.classList.add('visible');
+    }
+  }
+
+  startBtn.addEventListener('click', start, { once: true });
+
+  anchor.addEventListener('targetFound', () => {
+    hint.classList.add('hidden');
+    videoEl.currentTime = 0;
+    videoEl.play().catch((err) => console.warn('play() blocked', err));
+  });
+
+  anchor.addEventListener('targetLost', () => {
+    hint.classList.remove('hidden');
+    videoEl.pause();
+  });
+
+  sceneEl.addEventListener('arError', (e) => {
+    console.error('AR error', e.detail);
+    errorOverlay.classList.add('visible');
+  });
+})();
+</script>
+
+</body>
+</html>
