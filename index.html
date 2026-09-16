@@ -41,15 +41,6 @@
   #start-btn:active { transform: scale(0.97); }
   #start-overlay.hidden { display: none; }
 
-  /* ---------- Scanning / status hint ---------- */
-  #hint {
-    position: fixed; left: 0; right: 0; bottom: 28px; z-index: 15;
-    text-align: center; color: #fff; font-family: -apple-system, sans-serif;
-    font-size: 0.9rem; text-shadow: 0 1px 4px rgba(0,0,0,0.8);
-    pointer-events: none; transition: opacity 0.3s ease;
-  }
-  #hint.hidden { opacity: 0; }
-
   /* ---------- Camera / error fallback ---------- */
   #error-overlay {
     position: fixed; inset: 0; z-index: 25;
@@ -68,7 +59,6 @@
   <button id="start-btn">Tap to Start</button>
 </div>
 
-<div id="hint" class="hidden">Point your camera at the postcard photo</div>
 
 <div id="error-overlay">
   <div>
@@ -117,7 +107,6 @@
   const startOverlay = document.getElementById('start-overlay');
   const startBtn = document.getElementById('start-btn');
   const errorOverlay = document.getElementById('error-overlay');
-  const hint = document.getElementById('hint');
   const sceneEl = document.getElementById('ar-scene');
   const videoEl = document.getElementById('ar-video');
   const videoPlane = document.getElementById('ar-video-plane');
@@ -166,7 +155,6 @@
     unlockAudioThenStop();
 
     startOverlay.classList.add('hidden');
-    hint.classList.remove('hidden');
 
     try {
       const arSystem = sceneEl.systems['mindar-image-system'];
@@ -180,13 +168,11 @@
   startBtn.addEventListener('click', start, { once: true });
 
   anchor.addEventListener('targetFound', () => {
-    hint.classList.add('hidden');
     videoEl.currentTime = 0;
     videoEl.play().catch((err) => console.warn('play() blocked', err));
   });
 
   anchor.addEventListener('targetLost', () => {
-    hint.classList.remove('hidden');
     videoEl.pause();
   });
 
