@@ -44,11 +44,17 @@
   /* ---------- Camera / error fallback ---------- */
   #error-overlay {
     position: fixed; inset: 0; z-index: 25;
-    display: none; align-items: center; justify-content: center;
-    background: #1a0000; color: #fff; font-family: -apple-system, sans-serif;
+    display: none; flex-direction: column; align-items: center; justify-content: center;
+    background: #1a0000; color: #fff; font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
     text-align: center; padding: 32px; box-sizing: border-box;
   }
   #error-overlay.visible { display: flex; }
+  #error-overlay h2 { font-size: 1.2rem; margin: 0 0 12px; }
+  #error-overlay p { font-size: 0.9rem; opacity: 0.85; margin: 0 0 8px; max-width: 340px; line-height: 1.5; }
+  #error-retry-btn {
+    margin-top: 20px; padding: 14px 32px; font-size: 1rem; font-weight: 600; color: #1a0000;
+    background: #ff8a3d; border: none; border-radius: 999px; cursor: pointer;
+  }
 </style>
 </head>
 <body>
@@ -61,10 +67,9 @@
 
 
 <div id="error-overlay">
-  <div>
-    <p>Camera access is needed to view this AR postcard.</p>
-    <p>Please allow camera permission and reload the page.</p>
-  </div>
+  <h2 id="error-title">Camera access is needed</h2>
+  <p id="error-message"></p>
+  <button id="error-retry-btn">Try Again</button>
 </div>
 
 <a-scene
@@ -107,10 +112,60 @@
   const startOverlay = document.getElementById('start-overlay');
   const startBtn = document.getElementById('start-btn');
   const errorOverlay = document.getElementById('error-overlay');
+  const errorTitle = document.getElementById('error-title');
+  const errorMessage = document.getElementById('error-message');
+  const errorRetryBtn = document.getElementById('error-retry-btn');
   const sceneEl = document.getElementById('ar-scene');
   const videoEl = document.getElementById('ar-video');
   const videoPlane = document.getElementById('ar-video-plane');
   const anchor = document.getElementById('target-anchor');
+
+  // MindAR's own "arError" event only ever carries {error: "VIDEO_FAIL"} for
+  // every getUserMedia failure, whether it's a denied permission, no camera,
+  // or the camera being busy in another app - it doesn't forward the actual
+  // error. Wrap getUserMedia ourselves so we can see the real DOMException
+  // and give a message people can actually act on.
+  let lastCameraError = null;
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    const originalGetUserMedia = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+    navigator.mediaDevices.getUserMedia = function (constraints) {
+      return originalGetUserMedia(constraints).catch((err) => {
+        lastCameraError = err;
+        throw err;
+      });
+    };
+  }
+
+  const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+
+  function describeCameraError(err) {
+    const name = err && err.name;
+    if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+      return {
+        title: 'Camera permission is blocked',
+        message: isIOS
+          ? 'Go to Settings → Safari → Camera, and allow access for this site (or Settings → Safari → Advanced → Website Data, remove this site, then reload).'
+          : 'Tap the lock icon next to the address bar → Permissions → Camera, and switch it to Allow.',
+      };
+    }
+    if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+      return { title: 'No camera found', message: 'This device doesn’t have a usable camera, or it isn’t accessible right now.' };
+    }
+    if (name === 'NotReadableError' || name === 'TrackStartError') {
+      return { title: 'Camera is busy', message: 'Another app may be using the camera. Close other camera apps and try again.' };
+    }
+    return {
+      title: 'Camera access is needed',
+      message: 'Please allow camera permission for this site in your browser settings, then try again.',
+    };
+  }
+
+  function showCameraError() {
+    const { title, message } = describeCameraError(lastCameraError);
+    errorTitle.textContent = title;
+    errorMessage.textContent = message;
+    errorOverlay.classList.add('visible');
+  }
 
   // Size the video plane to match the target image's aspect ratio so the
   // overlay lines up exactly with the printed postcard, regardless of the
@@ -151,21 +206,33 @@
     started = true;
 
     // Must run inside the tap gesture so iOS Safari allows audio playback
-    // for every later programmatic videoEl.play() call.
+    // for every later programmatic videoEl.play() call. Also re-runs safely
+    // on a "Try Again" retry - unlockAudioThenStop() is a no-op once
+    // audioUnlocked is already true.
     unlockAudioThenStop();
 
     startOverlay.classList.add('hidden');
+    errorOverlay.classList.remove('visible');
 
     try {
       const arSystem = sceneEl.systems['mindar-image-system'];
       await arSystem.start();
     } catch (err) {
+      // MindAR's VIDEO_FAIL path doesn't actually throw here (it emits
+      // "arError" and returns normally - see the listener below), but keep
+      // this as a fallback for any other startup exception.
       console.error('MindAR failed to start', err);
-      errorOverlay.classList.add('visible');
+      started = false;
+      showCameraError();
     }
   }
 
-  startBtn.addEventListener('click', start, { once: true });
+  startBtn.addEventListener('click', start);
+
+  errorRetryBtn.addEventListener('click', () => {
+    started = false;
+    start();
+  });
 
   anchor.addEventListener('targetFound', () => {
     videoEl.currentTime = 0;
@@ -177,8 +244,9 @@
   });
 
   sceneEl.addEventListener('arError', (e) => {
-    console.error('AR error', e.detail);
-    errorOverlay.classList.add('visible');
+    console.error('AR error', e.detail, lastCameraError);
+    started = false;
+    showCameraError();
   });
 })();
 </script>
