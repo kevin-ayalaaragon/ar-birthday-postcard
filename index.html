@@ -55,6 +55,19 @@
     margin-top: 20px; padding: 14px 32px; font-size: 1rem; font-weight: 600; color: #1a0000;
     background: #ff8a3d; border: none; border-radius: 999px; cursor: pointer;
   }
+
+  /* ---------- Tap-to-start confetti ---------- */
+  #confetti-container {
+    position: fixed; inset: 0; z-index: 30; overflow: hidden; pointer-events: none;
+  }
+  .confetti-piece {
+    position: absolute; top: -20px; width: 8px; height: 14px; opacity: 0.9;
+    animation-name: confetti-fall; animation-timing-function: cubic-bezier(0.35, 0, 0.65, 1);
+    animation-fill-mode: forwards;
+  }
+  @keyframes confetti-fall {
+    to { transform: translateY(115vh) rotate(600deg); opacity: 0; }
+  }
 </style>
 </head>
 <body>
@@ -71,6 +84,8 @@
   <p id="error-message"></p>
   <button id="error-retry-btn">Try Again</button>
 </div>
+
+<div id="confetti-container"></div>
 
 <a-scene
   id="ar-scene"
@@ -167,6 +182,35 @@
     errorOverlay.classList.add('visible');
   }
 
+  // Purely decorative, purely DOM/CSS - runs on the 2D overlay layer above
+  // the AR canvas, never touches WebGL/MindAR, and never blocks start().
+  const CONFETTI_COLORS = ['#ff8a3d', '#ffcf4d', '#ff5f6d', '#6de3c0', '#8ab4ff'];
+  const confettiContainer = document.getElementById('confetti-container');
+
+  function launchConfetti() {
+    const frag = document.createDocumentFragment();
+    const pieceCount = 60;
+    let maxLifetime = 0;
+
+    for (let i = 0; i < pieceCount; i++) {
+      const piece = document.createElement('div');
+      piece.className = 'confetti-piece';
+      const duration = 1.6 + Math.random() * 1.2;
+      const delay = Math.random() * 0.35;
+      piece.style.left = (Math.random() * 100) + 'vw';
+      piece.style.background = CONFETTI_COLORS[i % CONFETTI_COLORS.length];
+      piece.style.transform = `rotate(${Math.random() * 360}deg)`;
+      piece.style.animationDuration = duration + 's';
+      piece.style.animationDelay = delay + 's';
+      maxLifetime = Math.max(maxLifetime, duration + delay);
+      frag.appendChild(piece);
+    }
+
+    confettiContainer.appendChild(frag);
+    // Cleanup once every piece has finished, so nothing lingers in the DOM.
+    setTimeout(() => { confettiContainer.innerHTML = ''; }, maxLifetime * 1000 + 200);
+  }
+
   // Size the video plane to match the target image's aspect ratio so the
   // overlay lines up exactly with the printed postcard, regardless of the
   // video file's own pixel dimensions.
@@ -227,7 +271,10 @@
     }
   }
 
-  startBtn.addEventListener('click', start);
+  startBtn.addEventListener('click', () => {
+    launchConfetti();
+    start();
+  });
 
   errorRetryBtn.addEventListener('click', () => {
     started = false;
