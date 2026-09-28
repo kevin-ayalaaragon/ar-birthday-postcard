@@ -1,0 +1,15 @@
+{
+  "name": "ar-birthday-postcard",
+  "private": true,
+  "description": "Zero-install WebAR birthday postcard (MindAR + A-Frame)",
+  "scripts": {
+    "lint:html": "html-validate index.html",
+    "test:smoke": "playwright test",
+    "serve": "http-server . -p 8080 -c-1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "html-validate": "^8.24.0",
+    "http-server": "^14.1.1"
+  }
+}
