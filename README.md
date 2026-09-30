@@ -31,11 +31,16 @@ separately, outside this repo.
 ## How it works
 
 1. **Print-time**: `target.jpg` (the postcard's front photo) is compiled into
-   `targets.mind` - a set of ORB feature descriptors MindAR extracts at
+   `targets.mind` - a set of trackable feature points MindAR extracts at
    several image scales, offline, via its
    [web compiler](https://hiukim.github.io/mind-ar-js-doc/tools/compile/).
+   MindAR's own detection/tracking algorithm is a custom, GPU-accelerated
+   reimplementation of the [ARToolKit](https://github.com/artoolkitx/artoolkit5)
+   approach, written as custom operations on top of TensorFlow.js's WebGL
+   backend - it uses that library purely for GPU compute, not for a trained
+   ML model (its own README is explicit about this).
 2. **Scan-time**: the phone camera's live feed is matched against those
-   descriptors every frame. Once enough features line up, MindAR solves a
+   feature points every frame. Once enough of them line up, MindAR solves a
    homography to recover the target's position/orientation and hands
    A-Frame a 6DoF pose each frame - the actual "AR" part: a virtual plane
    locked in 3D space that only appears to move because the camera does.
